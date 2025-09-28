@@ -26,7 +26,7 @@ TITLES_TO_VISUALIZE = [
 
 # TITLES_TO_VISUALIZE が空の場合に、可視化対象とするノードの最小リンク数
 # Minimum number of links for a node to be visualized when TITLES_TO_VISUALIZE is empty.
-MIN_LINKS_FOR_VISUALIZATION = 10
+MIN_LINKS_FOR_VISUALIZATION = 300
 
 
 # --- Simulation Physics Parameters ---
@@ -48,10 +48,10 @@ INITIAL_TEMPERATURE = 10.0
 COOLING_RATE = 0.95
 
 # シミュレーションの最大イテレーション数
-ITERATIONS = 1000
+ITERATIONS = 100
 
 # 時間ステップ
-DT = 0.05
+DT = 0.01
 
 # 速度の減衰係数
 DAMPING_FACTOR = 1
@@ -68,7 +68,7 @@ MOVEMENT_THRESHOLD = 0.1
 # x/distance_param = 13*W((repulsion_strength/attraction_strength)^(1/13)/13)
 
 # シミュレーション空間のパッキング密度（充填率）
-PACKING_DENSITY = 0.6
+PACKING_DENSITY = 0.4
 
 # 動的境界計算のためのスケール係数
 BOUNDARY_SCALE_FACTOR = 1.4

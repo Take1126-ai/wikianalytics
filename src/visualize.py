@@ -123,7 +123,7 @@ def run_simulation(G, nodes_to_visualize, node_map, nodes_list, simulation_outpu
             break
 
         if iteration % (config.ITERATIONS // 10) == 0:
-            print(f"イテレーション {iteration}/{config.ITERATIONS}, 最大移動量: {max_movement:.4f}")
+            print(f"イテレーション {iteration}/{config.ITERATIONS}, 系の温度/目標温度: {current_sim_temperature:.3f}/{target_temperature:.3f}, 最大移動量: {max_movement:.4f}")
 
     print("シミュレーション完了。")
     np.save(simulation_output_path, positions)
