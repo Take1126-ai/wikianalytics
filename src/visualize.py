@@ -26,22 +26,26 @@ def calculate_forces(positions, G, node_map, nodes_list):
             distance = np.linalg.norm(delta)
             if distance == 0: distance = 1e-6
 
-            if distance > config.DISTANCE_PARAM * 5:
-                continue
+            # if distance > config.DISTANCE_PARAM * 5:
+            #     continue
 
             repulsion = config.REPULSION_STRENGTH * (config.DISTANCE_PARAM / distance)**13 * (delta / distance)
             forces[i] -= repulsion
 
             # 引力 (リンクの重みに比例)
-            link_weight = 0
-            if G.has_edge(node_i, node_j):
-                link_weight += G[node_i][node_j].get('weight', 1)
-            if G.has_edge(node_j, node_i):
-                link_weight += G[node_j][node_i].get('weight', 1)
+            # link_weight = 0
+            # if G.has_edge(node_i, node_j):
+            #     link_weight += G[node_i][node_j].get('weight', 1)
+            # if G.has_edge(node_j, node_i):
+            #     link_weight += G[node_j][node_i].get('weight', 1)
 
-            if link_weight > 0:
-                attraction = link_weight * config.ATTRACTION_STRENGTH * np.exp(distance/config.DISTANCE_PARAM)*(delta / distance)
-                forces[i] += attraction
+            # if link_weight > 0:
+            #     attraction = link_weight * config.ATTRACTION_STRENGTH * np.exp(distance/config.DISTANCE_PARAM)*(delta / distance)
+            #     forces[i] += attraction
+
+            attraction = 1 * config.ATTRACTION_STRENGTH * np.exp(distance/config.DISTANCE_PARAM)*(delta / distance)
+            forces[i] += attraction
+
 
     return forces
 
