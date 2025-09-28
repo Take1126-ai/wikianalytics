@@ -1,0 +1,17 @@
+docs/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+
+# Virtual environments
+.venv# Data files to ignore (explicitly, to allow simulation_results)
+data/*.json
+data/*.npy
+test_data/*
+files/jawiki-latest-pages-articles.xml
