@@ -6,46 +6,52 @@ import plotly.graph_objects as go
 import math
 from . import config
 
-def calculate_forces(positions, G, node_map, nodes_list):
+def calculate_forces(positions, G, weight_matrix):
     """
     各粒子にかかる引力と斥力を計算します。
     Calculates attraction and repulsion forces on each particle.
+
+    Args:
+        positions (np.array): 各粒子の現在の位置。
+        G (nx.Graph): 対象のグラフ。
+        weight_matrix (np.array): エッジの重み行列。
     """
     num_particles = positions.shape[0]
     forces = np.zeros_like(positions)
 
-    for i in range(num_particles):
-        node_i = nodes_list[i]
-        
-        for j in range(num_particles):
-            if i == j: continue
+    # 全ての粒子ペア間の差分ベクトル (delta_matrix) を計算
+    delta_matrix = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
 
-            node_j = nodes_list[j]
+    # 全ての粒子ペア間の距離 (distance_matrix) を計算
+    distance_matrix = np.linalg.norm(delta_matrix, axis=2)
+    
+    # 自己相互作用とゼロ距離の処理: 対角要素を微小値に設定
+    # これによりゼロ除算を防ぎ、自己斥力/引力を回避
+    # 対角要素を微小値に設定し、距離が1e-3以下のものも1e-3にする
+    distance_matrix[distance_matrix < config.LIMIT_MIN_DIS] = config.LIMIT_MIN_DIS # 1e-3以下を1e-3に
 
-            delta = positions[j] - positions[i]
-            distance = np.linalg.norm(delta)
-            if distance == 0: distance = 1e-6
+    # 要素ごとの除算のために distance_matrix を拡張
+    distance_matrix_expanded = distance_matrix[:, :, np.newaxis]
 
-            # if distance > config.DISTANCE_PARAM * 5:
-            #     continue
+    # 斥力計算 (ソフトな1/r型、カットオフあり)
+    # 式: config.REPULSION_STRENGTH * delta / distance
+    repulsion_forces_matrix = config.REPULSION_STRENGTH * (delta_matrix / distance_matrix_expanded)
+    
+    # 近距離カットオフ距離を超える斥力を一定にするマスク
+    inner_cutoff_distance = config.DISTANCE_PARAM * config.REPULSION_INNER_CUTOFF_FACTOR
+    mask = distance_matrix_expanded < inner_cutoff_distance
+    # inner_cutoff_distance未満の斥力を一定値にする
+    # 斥力ベクトルの大きさを inner_cutoff_distance で計算した値に置き換える
+    inner_cutoff_repulsion = config.REPULSION_STRENGTH * (delta_matrix / (inner_cutoff_distance + 1e-6))
+    repulsion_forces_matrix[mask.repeat(2, axis=2)] = inner_cutoff_repulsion[mask.repeat(2, axis=2)]
 
-            repulsion = config.REPULSION_STRENGTH * (config.DISTANCE_PARAM / distance)**13 * (delta / distance)
-            forces[i] -= repulsion
+    forces -= np.sum(repulsion_forces_matrix, axis=1)
 
-            # 引力 (リンクの重みに比例)
-            # link_weight = 0
-            # if G.has_edge(node_i, node_j):
-            #     link_weight += G[node_i][node_j].get('weight', 1)
-            # if G.has_edge(node_j, node_i):
-            #     link_weight += G[node_j][node_i].get('weight', 1)
-
-            # if link_weight > 0:
-            #     attraction = link_weight * config.ATTRACTION_STRENGTH * np.exp(distance/config.DISTANCE_PARAM)*(delta / distance)
-            #     forces[i] += attraction
-
-            attraction = 1 * config.ATTRACTION_STRENGTH * np.exp(distance/config.DISTANCE_PARAM)*(delta / distance)
-            forces[i] += attraction
-
+    # 引力計算 (距離に寄らない一定の力)
+    # ベクトル化された式: weight_matrix * config.ATTRACTION_STRENGTH * delta / distance
+    weighted_attraction_forces_matrix = weight_matrix[:, :, np.newaxis] * config.ATTRACTION_STRENGTH * \
+                                        (delta_matrix / distance_matrix_expanded)
+    forces += np.sum(weighted_attraction_forces_matrix, axis=1)
 
     return forces
 
@@ -76,17 +82,34 @@ def run_simulation(G, nodes_to_visualize, node_map, nodes_list, simulation_outpu
     grid_size = math.ceil(math.sqrt(num_particles))
     cell_size = simulation_boundary_size / grid_size
     
-    positions = np.zeros((num_particles, 2))
-    for i in range(num_particles):
-        row = i // grid_size
-        col = i % grid_size
-        
-        x = (col + 0.5) * cell_size - (simulation_boundary_size / 2)
-        y = (row + 0.5) * cell_size - (simulation_boundary_size / 2)
-        positions[i] = [x, y]
+    # Vectorized initial grid placement
+    indices = np.arange(num_particles)
+    rows = indices // grid_size
+    cols = indices % grid_size
+
+    x_coords = (cols + 0.5) * cell_size - (simulation_boundary_size / 2)
+    y_coords = (rows + 0.5) * cell_size - (simulation_boundary_size / 2)
+    positions = np.stack((x_coords, y_coords), axis=1)
 
     initial_velocity_scale = math.sqrt(2 * config.INITIAL_TEMPERATURE)
     velocities = np.random.randn(num_particles, 2) * initial_velocity_scale
+
+    # positionsをCSVに出力
+    positions_csv_path = simulation_output_path.replace('.npy', '_positions.csv')
+    np.savetxt(positions_csv_path, positions, delimiter=',')
+    print(f"positionsをCSVファイル '{positions_csv_path}' に保存しました。")
+
+    # velocitiesをCSVに出力
+    velocities_csv_path = simulation_output_path.replace('.npy', '_velocities.csv')
+    np.savetxt(velocities_csv_path, velocities, delimiter=',')
+    print(f"velocitiesをCSVファイル '{velocities_csv_path}' に保存しました。")
+
+    # Create a weight matrix from the graph G using nx.to_numpy_array
+    # This matrix will contain the sum of weights for both outgoing and incoming links
+    # as per the original commented-out logic in calculate_forces.
+    # We need to create a symmetric weight matrix for attraction.
+    adj_matrix = nx.to_numpy_array(G, nodelist=nodes_list, weight='weight')
+    weight_matrix = adj_matrix + adj_matrix.T # Sum of weights for both directions
 
     masses = np.ones((num_particles, 1))
 
@@ -97,20 +120,20 @@ def run_simulation(G, nodes_to_visualize, node_map, nodes_list, simulation_outpu
     for iteration in range(config.ITERATIONS):
         old_positions = positions.copy()
 
-        forces = calculate_forces(positions, G, node_map, nodes_list)
+        forces = calculate_forces(positions, G, weight_matrix)
         
         velocities *= config.DAMPING_FACTOR 
         velocities += (forces / masses) * config.DT 
         positions += velocities * config.DT 
 
-        for i in range(num_particles):
-            for dim in range(2):
-                if positions[i, dim] < min_bound:
-                    positions[i, dim] = min_bound
-                    velocities[i, dim] *= -1.0
-                elif positions[i, dim] > max_bound:
-                    positions[i, dim] = max_bound
-                    velocities[i, dim] *= -1.0
+        # Vectorized boundary reflection
+        exceed_min = positions < min_bound
+        positions[exceed_min] = min_bound
+        velocities[exceed_min] *= -1.0
+
+        exceed_max = positions > max_bound
+        positions[exceed_max] = max_bound
+        velocities[exceed_max] *= -1.0
 
         kinetic_energy = 0.5 * np.sum(masses * velocities**2)
         current_sim_temperature = kinetic_energy / num_particles

@@ -5,8 +5,7 @@ Defines configuration values for simulation and visualization.
 
 # --- Data Creation Parameters ---
 # テストデータ作成に関するパラメータ
-PAGE_LIMIT_FOR_TEST = 1000
-
+PAGE_LIMIT_FOR_TEST = 5000  # テストデータのページ数上限
 
 # --- Visualization Parameters ---
 # 可視化に関するパラメータ
@@ -33,12 +32,12 @@ MIN_LINKS_FOR_VISUALIZATION = 0
 # 力指向レイアウトシミュレーションの物理パラメータ
 
 # 引力の強さの係数
-ATTRACTION_STRENGTH = 2.0
+ATTRACTION_STRENGTH = 10.0
 
 # 斥力の強さの係数
-REPULSION_STRENGTH = 1.0
+REPULSION_STRENGTH = 10
 
-# 斥力の距離パラメータ (Lennard-Jonesポテンシャルのsigmaに相当)
+# 距離パラメータ (Lennard-Jonesポテンシャルのsigmaに相当)
 DISTANCE_PARAM = 1.0
 
 # シミュレーテッドアニーリングの初期温度
@@ -51,22 +50,19 @@ COOLING_RATE = 0.9
 ITERATIONS = 100
 
 # 時間ステップ
-DT = 0.05
+DT = 0.1
 
 # 速度の減衰係数
 DAMPING_FACTOR = 1
+
+REPULSION_CUTOFF_FACTOR = 3.0 # 斥力が作用する最大距離をDISTANCE_PARAMの倍数で定義
+REPULSION_INNER_CUTOFF_FACTOR = 0.8 # 斥力が一定になる距離をDISTANCE_PARAMの倍数で定義
+LIMIT_MIN_DIS = 1e-3 # 距離の下限値（これ以下の距離はこの値にクリップ）
 
 # 収束判定のための移動量の閾値
 MOVEMENT_THRESHOLD = 0.1
 
 # 動的なシミュレーション境界計算のためのパラメータ
-# パラメータは visualize.py の run_simulation 内で使用される。
-# Note: より正確な平衡距離xはランベルトW関数を用いて x/distance_param = 13*W((repulsion_strength/attraction_strength)^(1/13)/13) で近似できる。
-# The following parameters are for dynamic simulation boundary calculation.
-# They are used within run_simulation in visualize.py.
-# Note: A more precise equilibrium distance 'x' can be approximated using the Lambert W function:
-# x/distance_param = 13*W((repulsion_strength/attraction_strength)^(1/13)/13)
-
 # シミュレーション空間のパッキング密度（充填率）
 PACKING_DENSITY = 0.2
 
